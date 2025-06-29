@@ -1,7 +1,11 @@
 import { expect, test, mock } from 'bun:test';
-import { render, screen } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event'; // Import user-event
+import { afterEach } from 'bun:test';
 
+afterEach(() => {
+  cleanup();
+});
 
 // Mock Next.js navigation
 const mockPush = mock(() => {});

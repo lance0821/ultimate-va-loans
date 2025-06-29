@@ -90,7 +90,11 @@ const RegistrationForm = () => {
         <CardDescription>Create your account to get started.</CardDescription>
       </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          noValidate
+          className="space-y-4"
+        >
           <CardContent>
             <div className="grid w-full items-center gap-4">
               <FormField
