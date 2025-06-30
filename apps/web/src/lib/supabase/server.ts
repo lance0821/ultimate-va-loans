@@ -4,7 +4,6 @@ import { cookies } from 'next/headers';
 export const createClient = async () => {
   // Now we await the cookies() call since it returns a Promise
   const cookieStore = await cookies();
-  console.log(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
