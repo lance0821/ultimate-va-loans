@@ -11,11 +11,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import React from "react";
+import ConfirmationModal from "@/components/ui/custom/ConfirmationModal";
 
 const initialDocuments = [
-  { id: 1, name: "Pay Stub - Last 30 days", status: "Not Uploaded" },
-  { id: 2, name: "Bank Statement - Last 2 months", status: "Not Uploaded" },
-  { id: 3, name: "W-2 - Last 2 years", status: "Not Uploaded" },
+  { id: 1, name: "Pay Stub - Last 30 days", status: "Not Uploaded", db_id: null as string | null },
+  { id: 2, name: "Bank Statement - Last 2 months", status: "Not Uploaded", db_id: null as string | null },
+  { id: 3, name: "W-2 - Last 2 years", status: "Not Uploaded", db_id: null as string | null },
 ];
 
 const DocumentChecklist = () => {
@@ -23,6 +24,8 @@ const DocumentChecklist = () => {
   const [isUploading, setIsUploading] = React.useState<number | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedDocId, setSelectedDocId] = React.useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [docToDelete, setDocToDelete] = React.useState<string | null>(null);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -31,62 +34,109 @@ const DocumentChecklist = () => {
     setIsUploading(selectedDocId);
 
     try {
-      // Step 1: Ask our backend for a signed URL
-      const response = await fetch('/api/documents/upload', {
+      const uploadUrlResponse = await fetch('/api/documents/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileName: file.name, fileType: file.type }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (!uploadUrlResponse.ok) {
+        const errorData = await uploadUrlResponse.json();
         throw new Error(errorData.error || "Could not get upload URL.");
       }
+      const { signedUrl, path } = await uploadUrlResponse.json();
 
-      const { signedUrl, path } = await response.json();
-
-      // Step 2: Upload the file directly to Supabase Storage
       const uploadResponse = await fetch(signedUrl, {
         method: 'PUT',
-        body: file,
         headers: { 'Content-Type': file.type },
+        body: file,
       });
 
       if (!uploadResponse.ok) {
-        throw new Error("File upload failed.");
+        throw new Error("File upload to storage failed.");
       }
-      
-      console.log("File uploaded successfully to path:", path);
-      
-      // Step 3: Confirm upload with our backend
-      await fetch('/api/documents/confirm-upload', {
+
+      const confirmResponse = await fetch('/api/documents/confirm-upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          loanApplicationId: '123e4567-e89b-12d3-a456-426614174000', // Placeholder
+          loanApplicationId: 'f6389290-eadc-486d-b260-793203e91427', // Placeholder
           fileName: file.name,
           filePath: path
         }),
       });
+      
+      if (!confirmResponse.ok) {
+          throw new Error("Failed to confirm document upload.");
+      }
 
-      // Step 4: Update UI state
+      const newDocumentRecord = await confirmResponse.json();
+
       setDocuments(docs =>
         docs.map(doc =>
-          doc.id === selectedDocId ? { ...doc, status: "Pending Review" } : doc
+          doc.id === selectedDocId
+            ? { ...doc, status: "Pending Review", db_id: newDocumentRecord.id }
+            : doc
         )
       );
+
     } catch (error) {
       console.error("Upload process failed:", error);
-      alert((error as Error).message || "An unexpected error occurred.");
+      alert((error as Error).message);
     } finally {
       setIsUploading(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
-  }; // <-- This closing brace for handleFileChange was missing.
+  };
 
   const handleUploadClick = (docId: number) => {
     setSelectedDocId(docId);
     fileInputRef.current?.click();
+  };
+
+  const openDeleteModal = (docDbId: string | null) => {
+    if (docDbId) {
+      setDocToDelete(docDbId);
+      setIsModalOpen(true);
+    } else {
+      // This case should not happen if the button is disabled correctly,
+      // but it's good practice to handle it.
+      alert("Cannot delete a document without a valid ID.");
+    }
+  };
+
+  const closeDeleteModal = () => {
+    setDocToDelete(null);
+    setIsModalOpen(false);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (docToDelete === null) return;
+    
+    try {
+      const response = await fetch(`/api/documents/${docToDelete}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete document.");
+      }
+
+      setDocuments(docs =>
+        docs.map(doc =>
+          doc.db_id === docToDelete
+            ? { ...doc, status: "Not Uploaded", db_id: null }
+            : doc
+        )
+      );
+
+    } catch (error) {
+      console.error("Delete process failed:", error);
+      alert((error as Error).message || "An unexpected error occurred.");
+    } finally {
+      closeDeleteModal();
+    }
   };
 
   return (
@@ -117,7 +167,16 @@ const DocumentChecklist = () => {
                     {doc.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right space-x-2">
+                  {doc.status === 'Pending Review' && doc.db_id && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => openDeleteModal(doc.db_id)}
+                    >
+                      Delete
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -132,8 +191,16 @@ const DocumentChecklist = () => {
           </TableBody>
         </Table>
       </div>
+
+      <ConfirmationModal
+        isOpen={isModalOpen}
+        onClose={closeDeleteModal}
+        onConfirm={handleDeleteConfirm}
+        title="Are you sure?"
+        description="This action cannot be undone. This will permanently delete the uploaded file."
+      />
     </div>
   );
 };
 
-export default DocumentChecklist; // <-- The export must be outside the component function.
+export default DocumentChecklist;
