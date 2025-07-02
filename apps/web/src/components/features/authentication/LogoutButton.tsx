@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@repo/ui";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@repo/supabase-clients/client";
 import { useRouter } from "next/navigation";
 import React from "react";
 

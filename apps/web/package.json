@@ -12,6 +12,7 @@
     "@hookform/resolvers": "^5.1.1",
     "@repo/ui": "*",
     "@repo/supabase-clients": "*",
+    "@repo/utils": "*",
     "next": "15.3.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

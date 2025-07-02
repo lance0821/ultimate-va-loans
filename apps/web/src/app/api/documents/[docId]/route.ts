@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@repo/supabase-clients/server";
 import { NextResponse } from "next/server";
 
 export async function DELETE(
