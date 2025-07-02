@@ -2,27 +2,29 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 export const createClient = async () => {
-  // Now we await the cookies() call since it returns a Promise
   const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    // CORRECTED: Use the secret SERVICE_ROLE_KEY for all server-side operations
+    process.env.SUPABASE_SERVICE_ROLE_KEY!, 
     {
       cookies: {
-        // getAll can now be called on the resolved cookieStore
-        getAll() {
-          return cookieStore.getAll();
+        async get(name: string) {
+          return cookieStore.get(name)?.value;
         },
-        // setAll receives an array of cookies to set
-        setAll(cookiesToSet) {
+        async set(name: string, value: string, options: CookieOptions) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
+            await cookieStore.set({ name, value, ...options });
           } catch (error) {
-            // The `set` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing user sessions.
+            // This can be ignored if you have middleware refreshing user sessions
+          }
+        },
+        async remove(name: string, options: CookieOptions) {
+          try {
+            await cookieStore.set({ name, value: '', ...options });
+          } catch (error) {
+            // This can be ignored if you have middleware refreshing user sessions
           }
         },
       },
