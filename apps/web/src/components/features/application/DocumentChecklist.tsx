@@ -19,13 +19,21 @@ const initialDocuments = [
   { id: 3, name: "W-2 - Last 2 years", status: "Not Uploaded", db_id: null as string | null },
 ];
 
+const LOAN_APPLICATION_ID = 'f6389290-eadc-486d-b260-793203e91427';
+
 const DocumentChecklist = () => {
   const [documents, setDocuments] = React.useState(initialDocuments);
   const [isUploading, setIsUploading] = React.useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [applicationSubmitted, setApplicationSubmitted] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedDocId, setSelectedDocId] = React.useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [docToDelete, setDocToDelete] = React.useState<string | null>(null);
+
+    const allDocumentsUploaded = documents.every(
+    (doc) => doc.status === "Pending Review"
+  );
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -60,7 +68,7 @@ const DocumentChecklist = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          loanApplicationId: 'f6389290-eadc-486d-b260-793203e91427', // Placeholder
+          loanApplicationId: LOAN_APPLICATION_ID, 
           fileName: file.name,
           filePath: path
         }),
@@ -86,6 +94,31 @@ const DocumentChecklist = () => {
     } finally {
       setIsUploading(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+    const handleSubmitApplication = async () => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/application/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          loanApplicationId: LOAN_APPLICATION_ID,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to submit application.");
+      }
+
+      setApplicationSubmitted(true); // Lock the UI
+      alert("Application submitted successfully!");
+
+    } catch (error) {
+      alert((error as Error).message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -190,6 +223,19 @@ const DocumentChecklist = () => {
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="mt-6 flex justify-end">
+        {applicationSubmitted ? (
+          <p className="text-green-600 font-semibold">Your application has been submitted for review.</p>
+        ) : (
+          <Button
+            onClick={handleSubmitApplication}
+            disabled={!allDocumentsUploaded || isSubmitting}
+          >
+            {isSubmitting ? "Submitting..." : "Submit Application for Review"}
+          </Button>
+        )}
       </div>
 
       <ConfirmationModal
