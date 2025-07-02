@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@repo/supabase-clients/server";
 import { redirect } from "next/navigation";
 import React from "react";
 import LogoutButton from "@/components/features/authentication/LogoutButton";

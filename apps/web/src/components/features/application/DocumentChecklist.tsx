@@ -7,11 +7,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+  Badge,
+  Button,
+  ConfirmationModal
+} from "@repo/ui";
+
 import React from "react";
-import ConfirmationModal from "@/components/ui/custom/ConfirmationModal";
+
 
 const initialDocuments = [
   { id: 1, name: "Pay Stub - Last 30 days", status: "Not Uploaded", db_id: null as string | null },
